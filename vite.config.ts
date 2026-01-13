@@ -40,6 +40,8 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         background: path.resolve(__dirname, 'src/background.ts'),
+        content: path.resolve(__dirname, 'src/scripts/content.ts'),
+        inpage: path.resolve(__dirname, 'src/scripts/inpage.ts'),
       },
       output: {
         entryFileNames: '[name].js',

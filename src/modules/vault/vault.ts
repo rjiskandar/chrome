@@ -241,6 +241,19 @@ export class VaultManager {
 
             cachedVaultKey = key;
             await this.touchSession();
+
+            /* PERSIST PUBLIC SESSION (For Background Worker) */
+            /* We save the first wallet's public info so dApps can see it even if popup is closed. */
+            if (wallets.length > 0) {
+                const w = wallets[0];
+                const pubData = {
+                    address: w.address,
+                    pubKey: (w.pqcKey as any)?.publicKey || (w.pqcKey as any)?.public_key || "",
+                    algo: "secp256k1" // Technically Dual, but for Keplr compat we say secp256k1 usually
+                };
+                await storageLocal.set('lumen_public_session', { lumen_public_session: pubData });
+            }
+
             return wallets;
         } catch (e) {
             throw new Error("Incorrect Password.");
@@ -345,6 +358,7 @@ export class VaultManager {
     static async clearSession() {
         cachedVaultKey = null;
         await storageSession.remove(STORAGE_KEY_SESSION);
+        await storageLocal.remove('lumen_public_session'); /* Cleanup for Background */
     }
 
     /**

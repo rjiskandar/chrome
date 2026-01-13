@@ -42,11 +42,11 @@
     "48": "icons/logo.png",
     "128": "icons/logo.png"
   },
-  "web_accessible_resources": [
+  "content_scripts": [ { "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_start", "all_frames": true } ], "web_accessible_resources": [
     {
       "resources": [
         "*.wasm",
-        "dilithium3.wasm"
+        "dilithium3.wasm", "inpage.js", "content.js"
       ],
       "matches": [
         "<all_urls>"
