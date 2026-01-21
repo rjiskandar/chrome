@@ -9,10 +9,11 @@ const injectScript = () => {
         const container = document.head || document.documentElement;
         const script = document.createElement('script');
         script.src = chrome.runtime.getURL('inpage.js');
-        script.setAttribute('async', 'false'); // Ensure synchronous load if possible
+        script.type = 'module';
+        script.async = false; // Ensure synchronous load if possible
         container.insertBefore(script, container.children[0]);
-        container.removeChild(script);
-        console.log("[Lumen] Content script injected inpage.js");
+        // container.removeChild(script); // JANGAN DIHAPUS DULU
+        console.log("[Lumen] Content script injected inpage.js from:", script.src);
     } catch (e) {
         console.error("[Lumen] Injection failed", e);
     }

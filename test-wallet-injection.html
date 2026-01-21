@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumen Wallet Injection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        code {
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔌 Lumen Wallet Injection Test</h1>
+        <p>Test halaman untuk verifikasi bahwa Lumen Wallet sudah ter-inject ke <code>window</code> object.</p>
+        
+        <div id="detection-status"></div>
+        
+        <h2>🧪 Test Actions</h2>
+        <button onclick="testEnable()">Test Enable (lumen)</button>
+        <button onclick="testGetKey()">Test GetKey</button>
+        <button onclick="testKeplrAlias()">Test Keplr Alias</button>
+        
+        <h2>📋 Console Output</h2>
+        <pre id="console-output">Waiting for actions...</pre>
+    </div>
+
+    <script>
+        const output = document.getElementById('console-output');
+        const statusDiv = document.getElementById('detection-status');
+
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logLine = `[${timestamp}] ${message}`;
+            if (data) {
+                logLine += '\n' + JSON.stringify(data, null, 2);
+            }
+            output.textContent += logLine + '\n\n';
+            console.log(message, data);
+        }
+
+        function checkInjection() {
+            log('🔍 Checking wallet injection...');
+            
+            const hasLumen = typeof window.lumen !== 'undefined';
+            const hasKeplr = typeof window.keplr !== 'undefined';
+            const sameObject = window.lumen === window.keplr;
+
+            let statusHTML = '';
+            
+            if (hasLumen) {
+                statusHTML += '<div class="status success">✅ window.lumen DETECTED</div>';
+                log('✅ window.lumen exists', {
+                    version: window.lumen.version,
+                    mode: window.lumen.mode
+                });
+            } else {
+                statusHTML += '<div class="status error">❌ window.lumen NOT FOUND</div>';
+                log('❌ window.lumen not found');
+            }
+
+            if (hasKeplr) {
+                statusHTML += '<div class="status success">✅ window.keplr DETECTED (Alias)</div>';
+                log('✅ window.keplr exists (same object: ' + sameObject + ')');
+            } else {
+                statusHTML += '<div class="status error">❌ window.keplr NOT FOUND</div>';
+                log('❌ window.keplr not found');
+            }
+
+            statusDiv.innerHTML = statusHTML;
+        }
+
+        async function testEnable() {
+            log('🟢 Testing window.lumen.enable("lumen")...');
+            try {
+                const result = await window.lumen.enable('lumen');
+                log('✅ Enable SUCCESS', result);
+            } catch (e) {
+                log('❌ Enable FAILED', e.message);
+            }
+        }
+
+        async function testGetKey() {
+            log('🔑 Testing window.lumen.getKey("lumen")...');
+            try {
+                const key = await window.lumen.getKey('lumen');
+                log('✅ GetKey SUCCESS', {
+                    address: key.bech32Address,
+                    algo: key.algo
+                });
+            } catch (e) {
+                log('❌ GetKey FAILED', e.message);
+            }
+        }
+
+        async function testKeplrAlias() {
+            log('🔗 Testing window.keplr (Alias)...');
+            try {
+                const result = await window.keplr.enable('lumen');
+                log('✅ Keplr Alias works!', result);
+            } catch (e) {
+                log('❌ Keplr Alias FAILED', e.message);
+            }
+        }
+
+        // Listen for wallet announcement event
+        window.addEventListener('keplr_keystorechange', () => {
+            log('📢 Received keplr_keystorechange event!');
+            checkInjection();
+        });
+
+        // Check on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkInjection();
+            }, 500); // Give time for content script
+        });
+    </script>
+</body>
+</html>

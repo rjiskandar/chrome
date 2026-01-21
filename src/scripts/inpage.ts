@@ -15,6 +15,12 @@ class LumenProvider {
         return this.request({ method: "enable", params: [chainId] });
     }
 
+    async experimentalSuggestChain(chainInfo: any) {
+        console.log("[Lumen] experimentalSuggestChain called (not implemented):", chainInfo);
+        // For now, just accept any chain suggestion
+        return Promise.resolve();
+    }
+
     async getKey(chainId: string) {
         return this.request({ method: "getKey", params: [chainId] });
     }
@@ -45,6 +51,14 @@ class LumenProvider {
         };
     }
 
+    async getOfflineSignerAuto(chainId: string) {
+        return this.getOfflineSigner(chainId);
+    }
+
+    async getOfflineSignerOnlyAmino(chainId: string) {
+        return this.getOfflineSigner(chainId);
+    }
+
     // Generic Request Handler
     private request(args: { method: string, params?: any[] }): Promise<any> {
         return new Promise((resolve, reject) => {
@@ -73,10 +87,28 @@ class LumenProvider {
     }
 }
 
+const provider = new LumenProvider();
+
 // Inject API
 // @ts-ignore
-window.lumen = new LumenProvider();
+window.lumen = provider;
 // @ts-ignore
-window.keplr = window.lumen; // Compatibility Mode
+window.keplr = provider; // Compatibility Mode
 
 console.log("[Lumen] Provider injected as window.lumen & window.keplr");
+
+// Announce wallet availability to dApps (Cosmos Kit detection)
+// Announce wallet availability to dApps (Cosmos Kit detection)
+// Dispatch immediately for dApps that are already listening or check on load
+window.dispatchEvent(new Event('keplr_keystorechange'));
+window.dispatchEvent(new Event('lumen_keystorechange'));
+
+// Also dispatch on window load to ensure dApps initialized
+window.addEventListener('load', () => {
+    window.dispatchEvent(new Event('keplr_keystorechange'));
+    window.dispatchEvent(new Event('lumen_keystorechange'));
+    console.log("[Lumen] Re-dispatched keystore change events on load");
+});
+
+console.log("[Lumen] Dispatched 'keplr_keystorechange' event");
+

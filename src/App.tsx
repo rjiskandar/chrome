@@ -6,6 +6,7 @@ import { Unlock } from './components/onboarding/Unlock';
 import { WalletMenu } from './components/WalletMenu';
 import { Settings } from './components/Settings';
 import { BackupModal } from './components/dashboard/BackupModal';
+import { ApprovalScreen } from './components/ApprovalScreen';
 import { VaultManager } from './modules/vault/vault';
 import { openExpandedView } from './utils/navigation';
 import { Send } from './components/send/Send';
@@ -49,6 +50,36 @@ function App() {
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
+
+  /* Connection Approval State */
+  const [showApproval, setShowApproval] = useState(false);
+
+  useEffect(() => {
+    // Check if there are pending approval requests
+    // Safety check: ensure chrome.runtime is available
+    if (!chrome?.runtime?.sendMessage) {
+      console.log("[App] Chrome runtime not available yet");
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage(
+        { type: "GET_PENDING_REQUESTS" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.log("[App] Runtime error checking pending requests:", chrome.runtime.lastError);
+            return;
+          }
+          if (response?.requests?.length > 0) {
+            console.log("[App] Found pending requests, showing approval screen");
+            setShowApproval(true);
+          }
+        }
+      );
+    } catch (error) {
+      console.log("[App] Error checking pending requests:", error);
+    }
+  }, []);
 
   /* Persist active wallet */
   useEffect(() => {
@@ -108,7 +139,34 @@ function App() {
 
       setIsLocked(false);
       setUnlockError(null);
-      navigate('/dashboard');
+
+      // Check if there are pending connection requests
+      if (chrome?.runtime?.sendMessage) {
+        try {
+          chrome.runtime.sendMessage(
+            { type: "GET_PENDING_REQUESTS" },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                console.log("[App] Error checking pending requests:", chrome.runtime.lastError);
+                navigate('/dashboard');
+                return;
+              }
+
+              if (response?.requests?.length > 0) {
+                console.log("[App] Found pending requests after unlock, showing approval screen");
+                setShowApproval(true);
+              } else {
+                navigate('/dashboard');
+              }
+            }
+          );
+        } catch (error) {
+          console.log("[App] Exception checking pending requests:", error);
+          navigate('/dashboard');
+        }
+      } else {
+        navigate('/dashboard');
+      }
     } catch (e: any) {
       setUnlockError(e?.message || "Incorrect password.");
     }
@@ -189,6 +247,11 @@ function App() {
 
   if (loading) {
     return <div className="h-full flex items-center justify-center bg-background text-primary">Loading...</div>;
+  }
+
+  // Show approval screen if there are pending requests
+  if (showApproval && !isLocked) {
+    return <ApprovalScreen onClose={() => setShowApproval(false)} />;
   }
 
   const isWide = window.innerWidth > 400;

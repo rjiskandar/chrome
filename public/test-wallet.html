@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumen Wallet Test (HTTP)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            max-height: 400px;
+            font-size: 12px;
+        }
+        code {
+            color: #e83e8c;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Lumen Wallet Test (HTTP Server)</h1>
+        <p>Test halaman untuk verifikasi auto-open popup extension.</p>
+        
+        <div class="highlight">
+            <strong>📌 Instruksi Test:</strong>
+            <ol>
+                <li>Pastikan extension sudah di-load di <code>chrome://extensions</code></li>
+                <li>Click <strong>"Test Enable"</strong> button di bawah</li>
+                <li>Extension popup <strong>HARUS OTOMATIS TERBUKA</strong> 🪟</li>
+            </ol>
+        </div>
+        
+        <div id="detection-status"></div>
+        
+        <h2>🧪 Test Actions</h2>
+        <button onclick="testEnable()" style="font-size: 18px; padding: 15px 30px;">
+            🎯 Test Enable (Auto-Open Popup)
+        </button>
+        <button onclick="testGetKey()">🔑 Test GetKey</button>
+        <button onclick="clearLogs()">🗑️ Clear Logs</button>
+        
+        <h2>📋 Console Output</h2>
+        <pre id="console-output">Waiting for test actions...</pre>
+    </div>
+
+    <script>
+        const output = document.getElementById('console-output');
+        const statusDiv = document.getElementById('detection-status');
+
+        function log(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logLine = `[${timestamp}] ${message}`;
+            if (data) {
+                logLine += '\n' + JSON.stringify(data, null, 2);
+            }
+            output.textContent += logLine + '\n\n';
+            console.log(message, data);
+        }
+
+        function clearLogs() {
+            output.textContent = 'Logs cleared.\n\n';
+        }
+
+        function checkInjection() {
+            log('🔍 Checking wallet injection...');
+            
+            const hasLumen = typeof window.lumen !== 'undefined';
+            const hasKeplr = typeof window.keplr !== 'undefined';
+
+            let statusHTML = '';
+            
+            if (hasLumen) {
+                statusHTML += '<div class="status success">✅ window.lumen DETECTED</div>';
+                log('✅ window.lumen exists', {
+                    version: window.lumen?.version,
+                    mode: window.lumen?.mode
+                });
+            } else {
+                statusHTML += '<div class="status error">❌ window.lumen NOT FOUND - Extension tidak ter-load!</div>';
+                log('❌ window.lumen not found');
+            }
+
+            if (hasKeplr) {
+                statusHTML += '<div class="status success">✅ window.keplr DETECTED (Alias)</div>';
+            }
+
+            statusDiv.innerHTML = statusHTML;
+            return hasLumen;
+        }
+
+        async function testEnable() {
+            if (!checkInjection()) {
+                alert('❌ Extension tidak ter-load! Pastikan extension sudah aktif di chrome://extensions');
+                return;
+            }
+
+            log('🟢 Calling window.lumen.enable("lumen")...');
+            log('⏳ Extension popup SHOULD AUTO-OPEN NOW...');
+            
+            try {
+                const result = await window.lumen.enable('lumen');
+                log('✅ Enable SUCCESS', result);
+                log('🎉 Jika popup TIDAK terbuka, ada masalah di background script!');
+            } catch (e) {
+                log('❌ Enable FAILED', {
+                    error: e.message,
+                    stack: e.stack
+                });
+            }
+        }
+
+        async function testGetKey() {
+            if (!checkInjection()) {
+                alert('❌ Extension tidak ter-load!');
+                return;
+            }
+
+            log('🔑 Testing window.lumen.getKey("lumen")...');
+            try {
+                const key = await window.lumen.getKey('lumen');
+                log('✅ GetKey SUCCESS', {
+                    address: key.bech32Address,
+                    algo: key.algo
+                });
+            } catch (e) {
+                log('❌ GetKey FAILED', e.message);
+            }
+        }
+
+        // Check on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkInjection();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
